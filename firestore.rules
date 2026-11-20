@@ -1,0 +1,316 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Reusable Hardened Primitives
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwnerEmailAdmin() {
+      return isVerified() && request.auth.token.email == 'subhankarhal007@gmail.com';
+    }
+
+    function isAdmin() {
+      return isOwnerEmailAdmin() || (
+        isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidTags(tags) {
+      return tags is list
+        && tags.size() <= 10
+        && (tags.size() == 0 || (tags[0] is string && tags[0].size() >= 1 && tags[0].size() <= 40));
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation Blueprints (Anti-Update-Gap)
+    // -------------------------------------------------------------------------
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['email', 'name', 'role', 'addedBy', 'createdAt'])
+        && data.keys().hasOnly(['email', 'name', 'role', 'addedBy', 'createdAt'])
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.role in ['admin', 'editor']
+        && data.addedBy is string && data.addedBy.size() >= 1 && data.addedBy.size() <= 128
+        && data.createdAt is timestamp;
+    }
+
+    function isValidArticle(data) {
+      return data.keys().hasAll([
+          'slug', 'title', 'subtitle', 'content', 'featuredImage', 'imageCaption',
+          'categorySlug', 'categoryName', 'tags', 'authorName', 'authorRole',
+          'authorBio', 'authorUid', 'readingTime', 'status', 'isTrending',
+          'isFeatured', 'seoTitle', 'metaDescription', 'views', 'publishedAt',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'slug', 'title', 'subtitle', 'content', 'featuredImage', 'imageCaption',
+          'categorySlug', 'categoryName', 'tags', 'authorName', 'authorRole',
+          'authorBio', 'authorUid', 'readingTime', 'status', 'isTrending',
+          'isFeatured', 'seoTitle', 'metaDescription', 'views', 'publishedAt',
+          'createdAt', 'updatedAt'
+        ])
+        && data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 140
+        && data.slug.matches('^[a-z0-9-]+$')
+        && data.title is string && data.title.size() >= 5 && data.title.size() <= 180
+        && data.subtitle is string && data.subtitle.size() >= 10 && data.subtitle.size() <= 320
+        && data.content is string && data.content.size() >= 20 && data.content.size() <= 60000
+        && data.featuredImage is string && data.featuredImage.size() <= 1000
+        && data.imageCaption is string && data.imageCaption.size() <= 240
+        && data.categorySlug is string && data.categorySlug.size() >= 2 && data.categorySlug.size() <= 80
+        && data.categorySlug.matches('^[a-z0-9-]+$')
+        && data.categoryName is string && data.categoryName.size() >= 2 && data.categoryName.size() <= 80
+        && isValidTags(data.tags)
+        && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100
+        && data.authorRole is string && data.authorRole.size() >= 2 && data.authorRole.size() <= 120
+        && data.authorBio is string && data.authorBio.size() <= 400
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.readingTime is number && data.readingTime >= 1 && data.readingTime <= 60
+        && data.status in ['draft', 'published']
+        && data.isTrending is bool
+        && data.isFeatured is bool
+        && data.seoTitle is string && data.seoTitle.size() <= 120
+        && data.metaDescription is string && data.metaDescription.size() <= 260
+        && data.views is number && data.views >= 0 && data.views <= 100000000
+        && data.publishedAt is string && data.publishedAt.size() <= 40
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['slug', 'name', 'description', 'order', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['slug', 'name', 'description', 'order', 'createdAt', 'updatedAt'])
+        && data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 80
+        && data.slug.matches('^[a-z0-9-]+$')
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.description is string && data.description.size() <= 300
+        && data.order is number && data.order >= 0 && data.order <= 1000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdvertisement(data) {
+      return data.keys().hasAll([
+          'slot', 'label', 'headline', 'description', 'ctaText',
+          'targetUrl', 'sponsorName', 'active', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'slot', 'label', 'headline', 'description', 'ctaText',
+          'targetUrl', 'sponsorName', 'active', 'createdAt', 'updatedAt'
+        ])
+        && data.slot in ['header-leaderboard', 'homepage-mid', 'article-sidebar', 'article-footer']
+        && data.label is string && data.label.size() >= 2 && data.label.size() <= 60
+        && data.headline is string && data.headline.size() >= 3 && data.headline.size() <= 140
+        && data.description is string && data.description.size() <= 260
+        && data.ctaText is string && data.ctaText.size() >= 2 && data.ctaText.size() <= 40
+        && data.targetUrl is string && data.targetUrl.size() <= 500
+        && data.sponsorName is string && data.sponsorName.size() >= 2 && data.sponsorName.size() <= 100
+        && data.active is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSiteSettings(data) {
+      return data.keys().hasAll([
+          'siteName', 'tagline', 'heroHeadline', 'heroSubheadline',
+          'defaultSeoTitle', 'defaultMetaDescription', 'contactEmail',
+          'newsletterTitle', 'newsletterDescription',
+          'twitterUrl', 'linkedinUrl', 'youtubeUrl', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'siteName', 'tagline', 'heroHeadline', 'heroSubheadline',
+          'defaultSeoTitle', 'defaultMetaDescription', 'contactEmail',
+          'newsletterTitle', 'newsletterDescription',
+          'twitterUrl', 'linkedinUrl', 'youtubeUrl', 'updatedAt'
+        ])
+        && data.siteName is string && data.siteName.size() >= 2 && data.siteName.size() <= 80
+        && data.tagline is string && data.tagline.size() >= 2 && data.tagline.size() <= 120
+        && data.heroHeadline is string && data.heroHeadline.size() >= 5 && data.heroHeadline.size() <= 160
+        && data.heroSubheadline is string && data.heroSubheadline.size() >= 10 && data.heroSubheadline.size() <= 320
+        && data.defaultSeoTitle is string && data.defaultSeoTitle.size() >= 5 && data.defaultSeoTitle.size() <= 120
+        && data.defaultMetaDescription is string && data.defaultMetaDescription.size() >= 10 && data.defaultMetaDescription.size() <= 260
+        && data.contactEmail is string && data.contactEmail.size() >= 3 && data.contactEmail.size() <= 254
+        && data.contactEmail.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.newsletterTitle is string && data.newsletterTitle.size() >= 3 && data.newsletterTitle.size() <= 120
+        && data.newsletterDescription is string && data.newsletterDescription.size() >= 10 && data.newsletterDescription.size() <= 260
+        && data.twitterUrl is string && data.twitterUrl.size() <= 300
+        && data.linkedinUrl is string && data.linkedinUrl.size() <= 300
+        && data.youtubeUrl is string && data.youtubeUrl.size() <= 300
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSubscriber(data) {
+      return data.keys().hasAll(['email', 'region', 'source', 'createdAt'])
+        && data.keys().hasOnly(['email', 'region', 'source', 'createdAt'])
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 254
+        && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.region is string && data.region.size() >= 1 && data.region.size() <= 60
+        && data.source is string && data.source.size() >= 1 && data.source.size() <= 60
+        && data.createdAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Match Blocks (Exhaustive Blueprint Coverage)
+    // -------------------------------------------------------------------------
+
+    // 1. Authorized Admins
+    match /admins/{adminId} {
+      allow get: if isVerified() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if isOwnerEmailAdmin();
+      allow create: if isVerified()
+        && isValidId(adminId)
+        && isValidAdminUser(incoming())
+        && incoming().addedBy == request.auth.uid
+        && incoming().createdAt == request.time
+        && isAdmin();
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(adminId) && isOwnerEmailAdmin();
+    }
+
+    // 2. Editorial Articles
+    match /articles/{articleId} {
+      allow get: if isValidId(articleId) && (existing().status == 'published' || isAdmin());
+      allow list: if resource.data.status == 'published'
+        || isOwnerEmailAdmin()
+        || (isVerified() && resource.data.authorUid == request.auth.uid);
+      allow create: if isVerified()
+        && isValidId(articleId)
+        && isValidArticle(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isVerified()
+        && isValidId(articleId)
+        && isValidArticle(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().authorUid == existing().authorUid
+        && incoming().updatedAt == request.time
+        && isAdmin()
+        && (
+          // Action: Editorial Content & SEO Update
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'slug', 'title', 'subtitle', 'content', 'featuredImage', 'imageCaption',
+            'categorySlug', 'categoryName', 'tags', 'authorName', 'authorRole',
+            'authorBio', 'readingTime', 'status', 'isTrending', 'isFeatured',
+            'seoTitle', 'metaDescription', 'publishedAt', 'updatedAt'
+          ]) ||
+          // Action: Publish / Unpublish Toggle
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'publishedAt', 'updatedAt']) ||
+          // Action: Feature / Trending Toggle
+          incoming().diff(existing()).affectedKeys().hasOnly(['isTrending', 'isFeatured', 'updatedAt'])
+        );
+      allow delete: if isVerified() && isValidId(articleId) && isAdmin();
+    }
+
+    // 3. Blog Categories
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if resource.data.order >= 0;
+      allow create: if isVerified()
+        && isValidId(categoryId)
+        && isValidCategory(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isVerified()
+        && isValidId(categoryId)
+        && isValidCategory(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['slug', 'name', 'description', 'order', 'updatedAt']);
+      allow delete: if isVerified() && isValidId(categoryId) && isAdmin();
+    }
+
+    // 4. Advertisements & Sponsor Placements
+    match /advertisements/{adId} {
+      allow get: if isValidId(adId) && (existing().active == true || isAdmin());
+      allow list: if resource.data.active == true || isOwnerEmailAdmin();
+      allow create: if isVerified()
+        && isValidId(adId)
+        && isValidAdvertisement(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isVerified()
+        && isValidId(adId)
+        && isValidAdvertisement(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isAdmin()
+        && (
+          // Action: Edit Ad Placement
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'slot', 'label', 'headline', 'description', 'ctaText',
+            'targetUrl', 'sponsorName', 'active', 'updatedAt'
+          ]) ||
+          // Action: Toggle Ad Active State
+          incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt'])
+        );
+      allow delete: if isVerified() && isValidId(adId) && isAdmin();
+    }
+
+    // 5. Global Site Settings (Singleton /settings/site)
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'site';
+      allow list: if false;
+      allow create: if isVerified()
+        && isValidId(settingId)
+        && settingId == 'site'
+        && isValidSiteSettings(incoming())
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isVerified()
+        && isValidId(settingId)
+        && settingId == 'site'
+        && isValidSiteSettings(incoming())
+        && incoming().updatedAt == request.time
+        && isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'siteName', 'tagline', 'heroHeadline', 'heroSubheadline',
+          'defaultSeoTitle', 'defaultMetaDescription', 'contactEmail',
+          'newsletterTitle', 'newsletterDescription',
+          'twitterUrl', 'linkedinUrl', 'youtubeUrl', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // 6. Newsletter Subscribers (Strict PII Isolation)
+    match /subscribers/{subscriberId} {
+      allow get: if isVerified() && isValidId(subscriberId) && isAdmin();
+      allow list: if isOwnerEmailAdmin();
+      allow create: if isValidId(subscriberId)
+        && isValidSubscriber(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isVerified() && isValidId(subscriberId) && isAdmin();
+    }
+  }
+}

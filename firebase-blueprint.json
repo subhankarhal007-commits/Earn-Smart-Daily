@@ -1,0 +1,440 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator account permitted to manage blog articles, categories, advertisements, and site settings.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Verified administrator email address"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Administrator display name"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "editor"],
+          "description": "Administrative role level"
+        },
+        "addedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "UID of the administrator who created this record"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin access was granted"
+        }
+      },
+      "required": ["email", "name", "role", "addedBy", "createdAt"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Editorial blog article published or drafted on EarnSmart Daily.",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 140,
+          "pattern": "^[a-z0-9-]+$",
+          "description": "SEO-friendly URL slug"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 180,
+          "description": "Article headline"
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 320,
+          "description": "Editorial deck / short summary"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 60000,
+          "description": "Full Markdown editorial body content"
+        },
+        "featuredImage": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "URL or path to the featured article image"
+        },
+        "imageCaption": {
+          "type": "string",
+          "maxLength": 240,
+          "description": "Editorial figure caption for featured image"
+        },
+        "categorySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Primary category slug"
+        },
+        "categoryName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Primary category display name"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Up to 10 concise topic tags"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Author full name"
+        },
+        "authorRole": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Author editorial title"
+        },
+        "authorBio": {
+          "type": "string",
+          "maxLength": 400,
+          "description": "Short author biography"
+        },
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the creating admin"
+        },
+        "readingTime": {
+          "type": "number",
+          "description": "Estimated reading time in minutes (1 to 60)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "published"],
+          "description": "Publication visibility state"
+        },
+        "isTrending": {
+          "type": "boolean",
+          "description": "Whether article appears in the Trending section"
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Whether article is highlighted as Hero Lead Story"
+        },
+        "seoTitle": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Custom SEO meta title"
+        },
+        "metaDescription": {
+          "type": "string",
+          "maxLength": 260,
+          "description": "Custom SEO meta description"
+        },
+        "views": {
+          "type": "number",
+          "description": "Editorial readership counter"
+        },
+        "publishedAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Display publication date (YYYY-MM-DD)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last modification"
+        }
+      },
+      "required": [
+        "slug",
+        "title",
+        "subtitle",
+        "content",
+        "featuredImage",
+        "imageCaption",
+        "categorySlug",
+        "categoryName",
+        "tags",
+        "authorName",
+        "authorRole",
+        "authorBio",
+        "authorUid",
+        "readingTime",
+        "status",
+        "isTrending",
+        "isFeatured",
+        "seoTitle",
+        "metaDescription",
+        "views",
+        "publishedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Editorial category organizing EarnSmart Daily articles.",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Category URL slug"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "description": "Category display name"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Category editorial summary"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display sort priority"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["slug", "name", "description", "order", "createdAt", "updatedAt"]
+    },
+    "Advertisement": {
+      "title": "Advertisement",
+      "description": "Configurable advertisement and sponsorship placement managed via Admin Dashboard.",
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "enum": ["header-leaderboard", "homepage-mid", "article-sidebar", "article-footer"],
+          "description": "Placement location on the website"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 60,
+          "description": "Disclosure label such as Advertisement or Partner Spotlight"
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 140,
+          "description": "Ad banner headline"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 260,
+          "description": "Supporting sponsor copy"
+        },
+        "ctaText": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "description": "Button label"
+        },
+        "targetUrl": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Destination URL"
+        },
+        "sponsorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Sponsor brand or network name"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether placement is live on the public site"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "slot",
+        "label",
+        "headline",
+        "description",
+        "ctaText",
+        "targetUrl",
+        "sponsorName",
+        "active",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global website branding, editorial hero copy, SEO defaults, and social links.",
+      "type": "object",
+      "properties": {
+        "siteName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "tagline": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "heroHeadline": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "heroSubheadline": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 320
+        },
+        "defaultSeoTitle": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "defaultMetaDescription": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 260
+        },
+        "contactEmail": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "newsletterTitle": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "newsletterDescription": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 260
+        },
+        "twitterUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "linkedinUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "youtubeUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "siteName",
+        "tagline",
+        "heroHeadline",
+        "heroSubheadline",
+        "defaultSeoTitle",
+        "defaultMetaDescription",
+        "contactEmail",
+        "newsletterTitle",
+        "newsletterDescription",
+        "twitterUrl",
+        "linkedinUrl",
+        "youtubeUrl",
+        "updatedAt"
+      ]
+    },
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "Private newsletter subscriber record (PII-isolated: public create only, admin read/delete only).",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        },
+        "region": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "region", "source", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin accounts for EarnSmart Daily CMS."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Published and draft editorial blog articles."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Editorial blog categories."
+    },
+    "/advertisements/{adId}": {
+      "schema": { "$ref": "#/entities/Advertisement" },
+      "description": "Sponsor and advertisement slot configurations."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Singleton site settings document at /settings/site."
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/Subscriber" },
+      "description": "Newsletter subscriber email records with strict PII isolation."
+    }
+  }
+}

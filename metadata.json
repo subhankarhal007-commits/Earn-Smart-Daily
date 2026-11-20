@@ -1,0 +1,6 @@
+{
+  "name": "EarnSmart Daily",
+  "description": "EarnSmart Daily — Learn. Earn. Grow. Global editorial publication covering online earning, AI tools, freelancing, passive income, affiliate marketing, and remote work.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
